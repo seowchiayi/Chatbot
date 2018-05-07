@@ -16,10 +16,11 @@ public class Bot {
     }
 
     public static String getReply(String message){
-        String[]posLst;
+        ArrayList<String> posLst;
         Map<String,Double> map = new HashMap<>();
         String sen="";
         String res="";
+
         if(isGreeting(message)){
             return sendGreet(message);
         }
@@ -59,17 +60,21 @@ public class Bot {
     }
 
     //Preprocessing: Split sentence into an array of words
-    public static String[] tokenization(String userInput){
+    public static ArrayList<String> tokenization(String userInput){
         userInput = lowerCase(userInput);
-        String[]arr;
-        arr = userInput.split(" ");
-        return arr;
+        String[] initSplit;
+        initSplit = userInput.split(" ");
+        ArrayList<String> finalSplit = new ArrayList<>();
+        for(String w:initSplit){
+            finalSplit.add(w);
+        }
+        return finalSplit;
     }
 
     //Converts user info and question into sentence without past tense/plural
     public static String stemming(String userInput){
         userInput = lowerCase(userInput);
-        String [] inputArr = tokenization(userInput);
+        ArrayList<String> inputArr = tokenization(userInput);
         String s;
         String[] arr;
         String result = "";
@@ -80,12 +85,12 @@ public class Bot {
             while(input.hasNextLine()){
                 s = input.nextLine();
                 arr = s.split(",");
-                for (int i=0; i<inputArr.length;i++){
+                for (int i=0; i<inputArr.size();i++){
 
                     for(String w:arr){
                         //Converts past tense to present tense
-                        if (w.equals(inputArr[i])){
-                            inputArr[i] = s.substring(0,s.indexOf(","));
+                        if (w.equals(inputArr.get(i))){
+                            inputArr.set(i,s.substring(0,s.indexOf(",")));
                         }
 //                        if(inputArr[i].length()>3){
 //                            //Removes plural words
@@ -109,6 +114,7 @@ public class Bot {
         for (String c: inputArr){
             result+=c + " ";
         }
+        result = result.replaceAll("\\p{P}", "");
 
         return result;
 
@@ -131,14 +137,12 @@ public class Bot {
     public static boolean isGreeting(String userInput){
         String[] greet = {"hi","hello","who are you"};
         for(String w: greet){
-            if(userInput.contains(w)){
+            if(userInput.equals(w)){
                 return true;
             }
         }
 
-
         return false;
-
 
     }
 
@@ -154,15 +158,15 @@ public class Bot {
 
         int getHour = Integer.parseInt(time.substring(0,time.indexOf(":")));
         if(getHour>=6 && getHour<12){
-            return "Good morning" + greet[idx];
+            return "Good morning " + greet[idx];
 
         }
         else if(getHour>=12 && getHour<17){
-            return "Good afternoon" + greet[idx];
+            return "Good afternoon " + greet[idx];
 
         }
         else if (getHour>=17 && getHour<20){
-            return "Good evening" + greet[idx];
+            return "Good evening    " + greet[idx];
 
         }
         else{
@@ -197,66 +201,53 @@ public class Bot {
         return "Thank you for your info";
 
     }
-
-
-    //Return correct respond to questions that are not even relevant to database
-    public static boolean isRelevant(String ques){
-        boolean flag = true;
-        String[] quesArr = tokenization(ques);
-
-        String[] getInfoPosArr;
-        String[] posArr = storePos(ques);
+    //Remove stopwords
+    public static String removeStopwords(String ques){
         String getInfo;
-        String[]posLst;
+        String result="";
+        ArrayList<String> arr= tokenization(ques);
         try{
-            Scanner input = new Scanner("/home/chiayi/IdeaProjects/CYChatbot/database.txt");
+            Scanner input = new Scanner("/home/chiayi/IdeaProjects/CYChatbot/stopwords_eng.txt");
             File file = new File(input.nextLine());
             input = new Scanner(file);
+            //Loop through database
             while(input.hasNextLine()){
                 getInfo = input.nextLine();
-                //getInfoPosArr = storePos(input.nextLine());
-
-
-//                for(String word:posArr){
-//                    for(String term:getInfoPosArr){
-//                        String a = word.substring(word.indexOf(" ")+1,word.length());
-//                        String b = term.substring(term.indexOf(" ")+1,term.length());
-//                        System.out.println(word);
-//                        System.out.println(a);
-//                        System.out.println(term);
-//                        System.out.println(b);
-//                        System.out.println("-------------------");
-//                        if(word.equals(term)
-//                                && a.equals(b)
-//                                && a.equals("NOUN ") && b.equals("NOUN ")){
-//
-//                            return true;
-//                        }
-//
-//                    }
-//                }
-                System.out.println(getInfo);
-                System.out.println(stemming(ques));
                 ques = stemming(ques);
-                String []arr = tokenization(ques);
-                String test="";
-                for(int i =2 ;i<arr.length;i++){
-                    test+=arr[i] + " ";
+                for(int i =0 ;i<arr.size();i++){
+                    if(getInfo.equals(arr.get(i))){
+                        arr.set(i,"");
+                    }
                 }
-                System.out.println(test);
-                System.out.println(getInfo);
-                if(getInfo.contains(test)){
-                    return true;
-                }
-
-
-
 
             }
         } catch (Exception e){
             e.printStackTrace();
         }
-        return false;
+        for(int i =0 ;i<arr.size();i++){
+            result += arr.get(i) + " ";
+        }
+        return result.replaceAll("\\s{2,}", " ").trim();
+
+    }
+
+
+    //Return correct respond to questions that are not even relevant to database
+    public static boolean isRelevant(String ques){
+        String getInfo = sortTfidfMap(getTFIDF(ques));
+        boolean flag = false;
+        ques = removeStopwords(stemming(ques));
+        ArrayList<String> t = tokenization(ques);
+        for(String a: t){
+            if(getInfo.contains(a)){
+                flag = true;
+            }
+            else{
+                return false;
+            }
+        }
+
+        return flag;
 
     }
 
@@ -283,8 +274,8 @@ public class Bot {
 
     //Get Inverse Document Frequency (IDF) from user question (formula: total num of db lines/occurence of term in whole db)
     public static Map<String, Integer> getIdf(String ques){
-        String[] quesArr = tokenization(ques);
-        String[] getInfoArr;
+        ArrayList<String> quesArr = tokenization(ques);
+        ArrayList<String> getInfoArr;
         String getInfo;
         Map<String,Integer> idfMap = new HashMap<>();
 
@@ -322,8 +313,10 @@ public class Bot {
     //Calculate tfidf for user question for each document in database
     public static Map<String,Double> getTFIDF(String ques){
         int totalDoc = totalDoc();
-        String[] quesArr = tokenization(ques);
-        String[]getInfoArr;
+        //Split ques into words
+        ArrayList<String> quesArr = tokenization(ques);
+
+        ArrayList<String> getInfoArr;
         String getInfo;
         double tfCount = 0;
         double sum = 0;
@@ -335,31 +328,27 @@ public class Bot {
             Scanner input = new Scanner("/home/chiayi/IdeaProjects/CYChatbot/database.txt");
             File file = new File(input.nextLine());
             input = new Scanner(file);
+            //Loop through documents
             while(input.hasNextLine()){
                 getInfo = input.nextLine();
+
+                //Example Question: who went to bangkok
                 for(String s:quesArr){
+                    //Split document into words
                     getInfoArr = tokenization(getInfo);
-//                    System.out.println("Question Array: ");
-//                    for (String x: quesArr){
-//                        System.out.println(x);
-//                    }
-//                    System.out.println("Database Array: ");
-//                    for (String y: getInfoArr){
-//                        System.out.println(y);
-//                    }
+                    //Example Document: harry went to bangkok
                     for (String doc:getInfoArr){
                         if (doc.equals(s)){
                             tfCount +=1;
                         }
-
                     }
                     if(tfCount>=1){
-                        storeTf.add(Math.log10(totalDoc/idfMap.get(s))*tfCount/getInfoArr.length);
+                        storeTf.add(Math.log10(totalDoc/idfMap.get(s)+1)*tfCount/getInfoArr.size());
                     }
 
                     tfCount = 0;
                 }
-                for (double tfidf: storeTf){
+                for(double tfidf: storeTf){
                     sum+=tfidf;
                 }
                 tfidfMap.put(getInfo,sum);
@@ -371,13 +360,6 @@ public class Bot {
         } catch (Exception e){
             e.printStackTrace();
         }
-        //System.out.println(tfidfMap.values().toArray()[0], tfidfMap.values().toArray()[1]);
-//        if(tfidfMap.values().toArray()[0].equals(0.0)){
-//            return null;
-//        }
-//        else{
-//
-//        }
         return tfidfMap;
 
     }
@@ -401,18 +383,18 @@ public class Bot {
     }
 
     //Take highest tfidf and return part of speech of the words
-    public static String[] storePos(String userInput) {
+    public static ArrayList<String> storePos(String userInput) {
         String getWordPos;
-        String[] matches=tokenization(userInput);
+        ArrayList<String> matches=tokenization(userInput);
         try {
             Scanner input = new Scanner("/home/chiayi/IdeaProjects/CYChatbot/src/Bot/pos_tag.txt");
             File file = new File(input.nextLine());
             input = new Scanner(file);
             while (input.hasNextLine()) {
                 getWordPos = input.nextLine();
-                for (int i=0; i<matches.length;i++) {
-                    if (getWordPos.substring(0, getWordPos.indexOf(" ")).equals(matches[i])) {
-                        matches[i]= matches[i]+" " + getWordPos.substring(getWordPos.indexOf(" ")+1,getWordPos.length());
+                for (int i=0; i<matches.size();i++) {
+                    if (getWordPos.substring(0, getWordPos.indexOf(" ")).equals(matches.get(i))) {
+                        matches.set(i, matches.get(i)+" " + getWordPos.substring(getWordPos.indexOf(" ")+1,getWordPos.length()));
                     }
                 }
 
@@ -421,74 +403,116 @@ public class Bot {
             e.printStackTrace();
         }
 
-        for(int i=0; i<matches.length;i++){
-            matches[i]= matches[i] + " ";
+        for(int i=0; i<matches.size();i++){
+            System.out.println(matches.get(i));
+            matches.set(i,matches.get(i)+" ");
+            if(matches.get(i).substring(matches.get(i).indexOf(" ")+1,matches.get(i).length()).equals("")){
+                matches.set(i,matches.get(i)+ "NOUN ");
+            }
         }
-
         return matches;
     }
 
     //Get respond by classifying situations asking where/who/why
-    public static String getRespond(String[] posLst, String ques,String userInput){
-        String[]quesArr = tokenization(ques);
+    public static String getRespond(ArrayList<String> posLst, String ques,String userInput){
+        ArrayList<String> quesArr = tokenization(ques);
+        ArrayList<String> quesPos = storePos(ques);
+        ArrayList<String> storePos = new ArrayList<>();
         String res="";
         String term,pos;
-        String checkQues = ques.substring(ques.indexOf("who")+4,ques.length());
-        Boolean because=false;
+        boolean because=false;
+        boolean conj = false;
         if (!isInfo(ques)){
-
             for(String word: quesArr){
                 if(word.equals("where") && isRelevant(ques)){
-                    for(int i=0; i<posLst.length;i++){
-                        term = posLst[i].substring(0, posLst[i].indexOf(" "));
-                        pos = posLst[i].substring(posLst[i].indexOf(" ")+1,posLst[i].length());
-                        if(i>=1){
-                            if(pos.equals("NOUN ") && (posLst[i-1].substring(posLst[i-1].indexOf(" ")+1,posLst[i-1].length())).contains("ADP")){
-                                res=term;
+                    for(String a: quesPos){
+                        if(a.contains("ADP")){
+                            storePos.add(a);
+                        }
+                    }
+                    for(String adp: storePos){
+                        System.out.println(adp);
+                        for(int i=posLst.indexOf(adp); i<posLst.size();i++){
+                            if(i+1<posLst.size()){
+                                term = posLst.get(i+1).substring(0, posLst.get(i+1).indexOf(" ")+1);
+                                pos = posLst.get(i+1).substring(posLst.get(i+1).indexOf(" ")+1,posLst.get(i+1).length());
+                                if(i<posLst.size()){
+                                    if(!term.equals("to ") && pos.contains("NOUN") || pos.contains("PRON") || pos.contains("ADJ")){
+
+                                        res+=term;
+                                    }
+                                    else{
+                                        return res;
+                                    }
+
+                                }
+
+                            }
+                            else{
                                 return res;
                             }
+
+
                         }
 
                     }
-                    return "Sorry I don't know";
+
 
                 }
-                else if(word.equals("who") && isRelevant(ques)){
-                    for(int i=0; i<posLst.length;i++){
-                        pos = posLst[i].substring(posLst[i].indexOf(" ")+1,posLst[i].length());
-                        if(i>=1){
-                            term = posLst[i-1].substring(0, posLst[i-1].indexOf(" "));
-                            System.out.println("TERM: " + term);
-                            if(pos.contains("VERB") && (posLst[i-1].substring(posLst[i-1].indexOf(" ")+1,posLst[i-1].length())).equals("NOUN ")){
-                                res=term;
 
-                            }
+                else if(word.equals("who") && isRelevant(ques)){
+                    int conjPos = 0;
+                    for(int i=0; i<posLst.size();i++){
+                        if(posLst.get(i).contains("CONJ")){
+                            conj = true;
+                            conjPos = i;
+                        }
+
+                    }
+                    if(conj){
+                        if(posLst.get(conjPos-1).substring(posLst.get(conjPos-1).indexOf(" ")+1,posLst.get(conjPos-1).length()).equals("NOUN ")
+                                && posLst.get(conjPos+1).substring(posLst.get(conjPos+1).indexOf(" ")+1,posLst.get(conjPos+1).length()).equals("NOUN ")){
+                            return posLst.get(conjPos-1).substring(0,posLst.get(conjPos-1).indexOf(" ")+1) +posLst.get(conjPos).substring(0,posLst.get(conjPos).indexOf(" ")+1) + posLst.get(conjPos+1).substring(0,posLst.get(conjPos+1).indexOf(" ")+1);
                         }
                     }
-//                    checkQues = res + " " + checkQues;
-//                    System.out.println("CHECK QUES: " + checkQues);
-//                    System.out.println("USER INPUT: " + userInput);
-//                    if (!checkQues.equals(userInput)){
-//                        return "Sorry I don't understand";
-//                    }
-//                    else {
-//                        return res;
-//                    }
-                    return res;
+                    else{
+                        for(String a:quesPos){
+                            if(a.contains("VERB")){
+                                System.out.println(a);
+                                storePos.add(a);
+                            }
+                        }
+                        for(String verb: storePos){
+                            for(int i=posLst.indexOf(verb); i>=0; i--){
+                                if(i-1>=0){
+                                    pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
+                                    term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
+                                    if(pos.contains("NOUN")){
+                                        res+=term;
+                                    }
+                                }
+
+
+                            }
+                            return res;
+                        }
+
+                    }
+
 
                 }
                 else if(word.equals("why")){
                     int start =0;
-                    for(int i=0; i<posLst.length;i++){
-                        term = posLst[i].substring(0, posLst[i].indexOf(" "));
-                        if(term.equals("because")){
+                    for(int i=0; i<posLst.size();i++){
+                        term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
+                        if(term.equals("because") || term.equals("to") || term.equals("as")){
                             because = true;
                             start = i;
                         }
                     }
                     if(because){
-                        for(int i=0; i<posLst.length;i++){
-                            term = posLst[i].substring(0, posLst[i].indexOf(" "));
+                        for(int i=0; i<posLst.size();i++){
+                            term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
                             if(i>=start){
                                 res += term + " ";
 
@@ -512,36 +536,7 @@ public class Bot {
 
     }
 
-    //private static String read = "Harry ran away from school because he wanted to go home";
-    //private static String test = "Harry is tall";
     public static void main(String[]args){
-        String[]posLst;
-        String db = "harry ran away from school because he wanted to go home";
-        String ques = "where did harry go";
-        clearDb();
-        writeToDb(stemming(db));
-        //writeToDb(stemming(test));
-//        String sen = sortTfidfMap(getTFIDF(ques));
-//        posLst = storePos(sen);
-//        getRespond(posLst,ques,sen);
-        //System.out.println(isRelevant(ques));
-        boolean flag = false;
-        String [] t1 = {"wanted","go","home","susan"};
-        String [] t2 = {"harry" ,"wanted", "to", "go" ,"home"};
-        for (String a: t2){
-            for(String b: t1){
-                System.out.println(a);
-                System.out.println(b);
-                if(b.contains(a)){
-                    flag = true;
-                }
-                else if(!b.contains(a)){
-                    break;
-                }
-            }
-
-        }
-        System.out.println(flag);
 
 
 

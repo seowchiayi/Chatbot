@@ -18,9 +18,6 @@ public class BotGUI {
     private JPanel chatbotWindow;
     private JScrollPane conversationAreaScrollPane;
     private JTextArea conversationArea;
-    private boolean returnFirst = true;
-    private String retFirst = "";
-    private String retlengthSecond = "";
 
     public BotGUI(){
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -42,18 +39,7 @@ public class BotGUI {
                 JOptionPane.showMessageDialog(null, "Please type something!");
             } else {
                 conversationArea.append("[" + dateFormat.format(date) + "]" + "You: "+message + "\n");
-                conversationArea.append("\n");
-//                if (returnFirst) {
-//                    Object[] ans = bot.getReply(message);
-//                    retFirst = (String) ans[0];
-//                    retSecond = (String) ans[1];
-//                conversationArea.append("[" + dateFormat.format(date) + "]" + "Bot: " + retFirst + "\n");
-//                    returnFirst = false;
-//                } else {
-                    //returnFirst =true;
                 conversationArea.append("[" + dateFormat.format(date) + "]" + "Bot: " + bot.getReply(message) + "\n");
-                //}
-                conversationArea.append("\n");
                 userInput.setText("");
             }
         };
