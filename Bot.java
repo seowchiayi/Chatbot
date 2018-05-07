@@ -122,7 +122,7 @@ public class Bot {
 
     //Check if what user entered is an info. Only store info because tfidf only uses documents
     public static boolean isInfo(String userInput){
-        String []questionWords = {"?","why","who","where"};
+        String []questionWords = {"?","why","who","where","do"};
         for (String s:questionWords){
             if(userInput.contains(s)){
                 return false;
@@ -404,7 +404,6 @@ public class Bot {
         }
 
         for(int i=0; i<matches.size();i++){
-            System.out.println(matches.get(i));
             matches.set(i,matches.get(i)+" ");
             if(matches.get(i).substring(matches.get(i).indexOf(" ")+1,matches.get(i).length()).equals("")){
                 matches.set(i,matches.get(i)+ "NOUN ");
@@ -423,110 +422,115 @@ public class Bot {
         boolean because=false;
         boolean conj = false;
         if (!isInfo(ques)){
-            for(String word: quesArr){
-                if(word.equals("where") && isRelevant(ques)){
-                    for(String a: quesPos){
-                        if(a.contains("ADP")){
-                            storePos.add(a);
-                        }
+            if(quesArr.get(0).equals("where") && isRelevant(ques)){
+                for(String a: quesPos){
+                    if(a.contains("ADP")){
+                        storePos.add(a);
                     }
-                    for(String adp: storePos){
-                        System.out.println(adp);
-                        for(int i=posLst.indexOf(adp); i<posLst.size();i++){
-                            if(i+1<posLst.size()){
-                                term = posLst.get(i+1).substring(0, posLst.get(i+1).indexOf(" ")+1);
-                                pos = posLst.get(i+1).substring(posLst.get(i+1).indexOf(" ")+1,posLst.get(i+1).length());
-                                if(i<posLst.size()){
-                                    if(!term.equals("to ") && pos.contains("NOUN") || pos.contains("PRON") || pos.contains("ADJ")){
-
-                                        res+=term;
-                                    }
-                                    else{
-                                        return res;
-                                    }
-
-                                }
-
-                            }
-                            else{
-                                return res;
-                            }
-
-
-                        }
-
-                    }
-
-
                 }
+                for(String adp: storePos){
+                    for(int i=posLst.indexOf(adp); i<posLst.size();i++){
+                        if(i+1<posLst.size()){
+                            term = posLst.get(i+1).substring(0, posLst.get(i+1).indexOf(" ")+1);
+                            pos = posLst.get(i+1).substring(posLst.get(i+1).indexOf(" ")+1,posLst.get(i+1).length());
+                            if(i<posLst.size()){
+                                if(!term.equals("to ") && pos.contains("NOUN") || pos.contains("PRON") || pos.contains("ADJ")){
 
-                else if(word.equals("who") && isRelevant(ques)){
-                    int conjPos = 0;
-                    for(int i=0; i<posLst.size();i++){
-                        if(posLst.get(i).contains("CONJ")){
-                            conj = true;
-                            conjPos = i;
-                        }
-
-                    }
-                    if(conj){
-                        if(posLst.get(conjPos-1).substring(posLst.get(conjPos-1).indexOf(" ")+1,posLst.get(conjPos-1).length()).equals("NOUN ")
-                                && posLst.get(conjPos+1).substring(posLst.get(conjPos+1).indexOf(" ")+1,posLst.get(conjPos+1).length()).equals("NOUN ")){
-                            return posLst.get(conjPos-1).substring(0,posLst.get(conjPos-1).indexOf(" ")+1) +posLst.get(conjPos).substring(0,posLst.get(conjPos).indexOf(" ")+1) + posLst.get(conjPos+1).substring(0,posLst.get(conjPos+1).indexOf(" ")+1);
-                        }
-                    }
-                    else{
-                        for(String a:quesPos){
-                            if(a.contains("VERB")){
-                                System.out.println(a);
-                                storePos.add(a);
-                            }
-                        }
-                        for(String verb: storePos){
-                            for(int i=posLst.indexOf(verb); i>=0; i--){
-                                if(i-1>=0){
-                                    pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
-                                    term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
-                                    if(pos.contains("NOUN")){
-                                        res+=term;
-                                    }
+                                    res+=term;
+                                }
+                                else{
+                                    return res;
                                 }
 
-
                             }
+
+                        }
+                        else{
                             return res;
                         }
 
-                    }
 
+                    }
 
                 }
-                else if(word.equals("why")){
-                    int start =0;
-                    for(int i=0; i<posLst.size();i++){
-                        term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
-                        if(term.equals("because") || term.equals("to") || term.equals("as")){
-                            because = true;
-                            start = i;
-                        }
-                    }
-                    if(because){
-                        for(int i=0; i<posLst.size();i++){
-                            term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
-                            if(i>=start){
-                                res += term + " ";
 
+
+            }
+
+            else if(quesArr.get(0).equals("who") && isRelevant(ques)){
+                for(String a:quesPos){
+                    if(a.contains("VERB")){
+
+                        storePos.add(a);
+                    }
+                }
+                for(String verb: storePos){
+                    for(int i=posLst.indexOf(verb); i>=0; i--){
+                        if(i-1>=0){
+                            pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
+                            term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
+                            System.out.println("POS " + pos);
+                            System.out.println("TERM " + term);
+                            if(!term.contains("a ") && pos.contains("NOUN") && !pos.contains("ADP") && !pos.contains("VERB") && !pos.contains("ADJ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP")){
+                                res = term+res;
                             }
                         }
-                        return res;
+                        else if(ques.contains(res)){
+                            System.out.println("HELLOOOOOOO");
+                            System.out.println(ques);
+                            System.out.println(res);
+                            String[] split = res.split(" ");
+                            ArrayList<String> temp = storePos(split[split.length-1]);
+                            for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
+                                res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+                            }
+                            return res;
+
+                        }
+                        else{
+                            return res;
+                        }
+
 
                     }
-                    else{
-                        return "Sorry the info you gave is insufficient";
+                }
+                return res;
+
+            }
+            else if(quesArr.get(0).equals("why")){
+                int start =0;
+                for(int i=0; i<posLst.size();i++){
+                    term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
+                    if(term.equals("because") || term.equals("as")){
+                        because = true;
+                        start = i;
                     }
+                }
+                if(because){
+                    for(int i=0; i<posLst.size();i++){
+                        term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
+                        if(i>=start){
+                            res += term + " ";
+
+                        }
+                    }
+                    return res;
 
                 }
+                else{
+                    return "Sorry the info you gave is insufficient";
+                }
+
             }
+            else if(quesArr.get(0).equals("do")){
+                if(isRelevant(ques)){
+                    return "Yes !";
+                }
+                else{
+                    return "No.";
+                }
+            }
+
             System.out.println(res);
             return "Sorry I don't know";
 
@@ -535,7 +539,6 @@ public class Bot {
         }
 
     }
-
     public static void main(String[]args){
 
 
