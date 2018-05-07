@@ -3,10 +3,14 @@ package Bot;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.lang.reflect.Array;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.lang.Math;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
 public class Bot {
 
@@ -23,6 +27,9 @@ public class Bot {
 
         if(isGreeting(message)){
             return sendGreet(message);
+        }
+        else if(isNumber(message)){
+            return calculator(message);
         }
         else{
             message = stemming(message);
@@ -48,9 +55,6 @@ public class Bot {
             return res;
 
         }
-
-
-
 
     }
 
@@ -86,22 +90,11 @@ public class Bot {
                 s = input.nextLine();
                 arr = s.split(",");
                 for (int i=0; i<inputArr.size();i++){
-
                     for(String w:arr){
                         //Converts past tense to present tense
                         if (w.equals(inputArr.get(i))){
                             inputArr.set(i,s.substring(0,s.indexOf(",")));
                         }
-//                        if(inputArr[i].length()>3){
-//                            //Removes plural words
-//                            if(inputArr[i].substring(inputArr[i].length()-1).equals("s")){
-//                                inputArr[i] = inputArr[i].substring(0,inputArr[i].length()-1);
-//                            }
-//                            //Removes tenses with past tense
-//                            else if(inputArr[i].substring(inputArr[i].length()-2,inputArr[i].length()).equals("ed")){
-//                                inputArr[i] = inputArr[i].substring(0,inputArr[i].length()-2);
-//                            }
-//                        }
                     }
 
                 }
@@ -119,12 +112,44 @@ public class Bot {
         return result;
 
     }
+    public static boolean isNumber(String userInput){
+        ArrayList<String> quesArr = tokenization(userInput);
+        for(String findDigit: quesArr) {
+            if (findDigit.matches(".*\\d+.*")) {
+                return true;
+
+            }
+        }
+        return false;
+
+    }
+
+    public static String calculator(String userInput){
+        Object result="";
+        ArrayList<String> quesArr = tokenization(userInput);
+        for(String findDigit: quesArr) {
+            if (findDigit.matches(".*\\d+.*")) {
+                ScriptEngineManager manager = new ScriptEngineManager();
+                ScriptEngine engine = manager.getEngineByName("js");
+                try {
+                    String expression = findDigit;
+                    result = engine.eval(expression);
+                } catch(ScriptException se) {
+                    se.printStackTrace();
+                }
+
+            }
+
+        }
+        return String.valueOf(result);
+    }
 
     //Check if what user entered is an info. Only store info because tfidf only uses documents
     public static boolean isInfo(String userInput){
-        String []questionWords = {"?","why","who","where","do"};
+        String []questionWords = {"why","who","where","do","what"};
+        ArrayList <String> arr = tokenization(userInput);
         for (String s:questionWords){
-            if(userInput.contains(s)){
+            if(arr.get(0).equals(s)){
                 return false;
             }
 
@@ -166,7 +191,7 @@ public class Bot {
 
         }
         else if (getHour>=17 && getHour<20){
-            return "Good evening    " + greet[idx];
+            return "Good evening " + greet[idx];
 
         }
         else{
@@ -365,7 +390,7 @@ public class Bot {
     }
 
     public static <K,V extends Comparable<? super V>>
-    K sortTfidfMap(Map<K,V> map) {
+    String sortTfidfMap(Map<K,V> map) {
 
         List<Map.Entry<K,V>> sortedEntries = new ArrayList<Map.Entry<K,V>>(map.entrySet());
 
@@ -379,7 +404,13 @@ public class Bot {
         );
         System.out.println("Print sorted tfidfmap");
         System.out.println(sortedEntries);
-        return sortedEntries.get(0).getKey();
+        if(sortedEntries.size()>1){
+            if(sortedEntries.get(0).getValue().equals(sortedEntries.get(1).getValue())){
+                return sortedEntries.get(0).getKey().toString() + sortedEntries.get(1).getKey().toString();
+            }
+        }
+
+        return sortedEntries.get(0).getKey().toString();
     }
 
     //Take highest tfidf and return part of speech of the words
@@ -469,16 +500,11 @@ public class Bot {
                         if(i-1>=0){
                             pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
                             term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
-                            System.out.println("POS " + pos);
-                            System.out.println("TERM " + term);
                             if(!term.contains("a ") && pos.contains("NOUN") && !pos.contains("ADP") && !pos.contains("VERB") && !pos.contains("ADJ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP")){
                                 res = term+res;
                             }
                         }
                         else if(ques.contains(res)){
-                            System.out.println("HELLOOOOOOO");
-                            System.out.println(ques);
-                            System.out.println(res);
                             String[] split = res.split(" ");
                             ArrayList<String> temp = storePos(split[split.length-1]);
                             for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
@@ -524,11 +550,38 @@ public class Bot {
             }
             else if(quesArr.get(0).equals("do")){
                 if(isRelevant(ques)){
-                    return "Yes !";
+                    if(posLst.contains("not ADV ")){
+                        if(ques.contains("not ")){
+                            return "Yes !";
+                        }
+                        return "No. ";
+                    }
+                    if(ques.contains("not") && !posLst.contains("not ADV ")){
+                        return "No !";
+                    }
+                    else{
+                        return "Yes !";
+                    }
+
                 }
                 else{
                     return "No.";
                 }
+            }
+            else if(quesArr.get(0).equals("what")){
+                String[] split = ques.split(" ");
+                ArrayList<String> temp = storePos(split[split.length-1]);
+                for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
+                    if(!posLst.get(j).substring(posLst.get(j).indexOf(" ")+1,posLst.get(j).length()).contains("ADP ")){
+                        res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+                    }
+                    else{
+                        return res;
+                    }
+
+                }
+                return res;
+
             }
 
             System.out.println(res);
@@ -540,8 +593,6 @@ public class Bot {
 
     }
     public static void main(String[]args){
-
-
 
 
     }
