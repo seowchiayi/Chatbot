@@ -16,8 +16,8 @@ public class BotGUI {
     private JButton enterButton;
     private JTextField userInput;
     private JPanel chatbotWindow;
-    private JScrollPane conversationAreaScrollPane;
     private JTextArea conversationArea;
+    private JScrollPane conversationAreaScrollPane;
 
     public BotGUI(){
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -26,9 +26,7 @@ public class BotGUI {
 
         chatbotWindow.setMinimumSize(new Dimension(width,length));
         chatbotWindow.setPreferredSize(new Dimension(width,length));
-
         chatbotWindow.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-
         userInput.setPreferredSize(new Dimension(100,30));
 
         conversationArea.append("Hello Welcome to the Chatbot \n");
@@ -42,10 +40,13 @@ public class BotGUI {
                 conversationArea.append("[" + dateFormat.format(date) + "]" + "Bot: " + bot.getReply(message) + "\n");
                 userInput.setText("");
             }
+
+            conversationAreaScrollPane.getViewport().setViewPosition(new Point(0,conversationArea.getDocument().getLength()));
         };
 
         enterButton.addActionListener(replyActionListener);
         userInput.addActionListener(replyActionListener);
+
     }
     public static void main(String[] args){
         JFrame frame = new JFrame("Chatbot");
@@ -54,6 +55,7 @@ public class BotGUI {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
     }
 }
 

@@ -15,7 +15,7 @@ import javax.script.ScriptException;
 public class Bot {
 
     public Bot(){
-        clearDb();
+        //clearDb();
 
     }
 
@@ -406,7 +406,7 @@ public class Bot {
         System.out.println(sortedEntries);
         if(sortedEntries.size()>1){
             if(sortedEntries.get(0).getValue().equals(sortedEntries.get(1).getValue())){
-                return sortedEntries.get(0).getKey().toString() + sortedEntries.get(1).getKey().toString();
+                return sortedEntries.get(0).getKey().toString() + "and " + sortedEntries.get(1).getKey().toString() + "both";
             }
         }
 
@@ -453,7 +453,14 @@ public class Bot {
         boolean because=false;
         boolean conj = false;
         if (!isInfo(ques)){
-            if(quesArr.get(0).equals("where") && isRelevant(ques)){
+            if(posLst.contains("and CONJ X ") && isRelevant(ques) && posLst.get(posLst.size()-1).contains("both DET ")){
+                for(int i=0;i<posLst.size()-1;i++){
+                    term = posLst.get(i).substring(0,posLst.get(i).indexOf(" ")+1);
+                    res+=term;
+                }
+                return res;
+            }
+            else if(quesArr.get(0).equals("where") && isRelevant(ques)){
                 for(String a: quesPos){
                     if(a.contains("ADP")){
                         storePos.add(a);
@@ -465,8 +472,7 @@ public class Bot {
                             term = posLst.get(i+1).substring(0, posLst.get(i+1).indexOf(" ")+1);
                             pos = posLst.get(i+1).substring(posLst.get(i+1).indexOf(" ")+1,posLst.get(i+1).length());
                             if(i<posLst.size()){
-                                if(!term.equals("to ") && pos.contains("NOUN") || pos.contains("PRON") || pos.contains("ADJ")){
-
+                                if(!term.equals("to ") && pos.contains("NOUN ") || pos.contains("PRON") || pos.contains("ADJ")){
                                     res+=term;
                                 }
                                 else{
@@ -495,39 +501,49 @@ public class Bot {
                         storePos.add(a);
                     }
                 }
-                for(String verb: storePos){
-                    for(int i=posLst.indexOf(verb); i>=0; i--){
-                        if(i-1>=0){
-                            pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
-                            term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
-                            if(!term.contains("a ") && pos.contains("NOUN") && !pos.contains("ADP") && !pos.contains("VERB") && !pos.contains("ADJ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP")){
-                                res = term+res;
+                if(storePos.size()==1 && storePos.contains("is VERB X ")) {
+                    for(int i=0; i<posLst.size(); i++){
+                        res +=posLst.get(i).substring(0,posLst.get(i).indexOf(" ") + 1);
+                    }
+                    return res;
+                } else{
+                    for(String verb: storePos){
+                        System.out.println("VERBBBB: " + verb);
+                        for(int i=posLst.indexOf(verb); i>=0; i--){
+                            if(i-1>=0){
+                                pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
+                                term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
+                                System.out.println("POS: " + pos);
+                                System.out.println("TERM: " +term);
+                                if(!term.contains("a ") && pos.contains("NOUN ") && !pos.contains("ADP ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP ")){
+                                    res = term+res;
+                                }
                             }
-                        }
-                        else if(ques.contains(res)){
-                            String[] split = res.split(" ");
-                            ArrayList<String> temp = storePos(split[split.length-1]);
-                            for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
-                                res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+                            else if(ques.contains(res)){
+                                String[] split = res.split(" ");
+                                ArrayList<String> temp = storePos(split[split.length-1]);
+                                for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
+                                    res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+                                }
+                                return res;
+
                             }
-                            return res;
+                            else{
+                                return res;
+                            }
+
 
                         }
-                        else{
-                            return res;
-                        }
-
-
                     }
                 }
-                return res;
 
             }
+
             else if(quesArr.get(0).equals("why")){
                 int start =0;
                 for(int i=0; i<posLst.size();i++){
                     term = posLst.get(i).substring(0, posLst.get(i).indexOf(" "));
-                    if(term.equals("because") || term.equals("as")){
+                    if(term.equals("because") || term.equals("as") || term.equals("so")){
                         because = true;
                         start = i;
                     }
@@ -548,7 +564,7 @@ public class Bot {
                 }
 
             }
-            else if(quesArr.get(0).equals("do")){
+            else if(quesArr.get(0).equals("do") || quesArr.get(0).equals("can")){
                 if(isRelevant(ques)){
                     if(posLst.contains("not ADV ")){
                         if(ques.contains("not ")){
@@ -568,16 +584,14 @@ public class Bot {
                     return "No.";
                 }
             }
-            else if(quesArr.get(0).equals("what")){
+            else if(quesArr.get(0).equals("what") && isRelevant(ques)){
                 String[] split = ques.split(" ");
                 ArrayList<String> temp = storePos(split[split.length-1]);
                 for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
-                    if(!posLst.get(j).substring(posLst.get(j).indexOf(" ")+1,posLst.get(j).length()).contains("ADP ")){
-                        res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
-                    }
-                    else{
-                        return res;
-                    }
+                    pos = posLst.get(j).substring(posLst.get(j).indexOf(" ")+1,posLst.get(j).length());
+//                    if(!pos.contains("ADJ") && !pos.contains("ADP") &&!pos.contains("DET") && !pos.contains("X")){
+                    res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+//                    }
 
                 }
                 return res;
