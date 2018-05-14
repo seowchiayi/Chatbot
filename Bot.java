@@ -15,7 +15,7 @@ import javax.script.ScriptException;
 public class Bot {
 
     public Bot(){
-        //clearDb();
+        clearDb();
 
     }
 
@@ -24,7 +24,6 @@ public class Bot {
         Map<String,Double> map = new HashMap<>();
         String sen="";
         String res="";
-
         if(isGreeting(message)){
             return sendGreet(message);
         }
@@ -160,7 +159,8 @@ public class Bot {
 
     //Detect intent if is a greeting
     public static boolean isGreeting(String userInput){
-        String[] greet = {"hi","hello","who are you"};
+        userInput = stemming(userInput);
+        String[] greet = {"hi ","hello ","who are you ","how are you "};
         for(String w: greet){
             if(userInput.equals(w)){
                 return true;
@@ -173,6 +173,7 @@ public class Bot {
 
     //Give respond to greeting
     public static String sendGreet(String userInput){
+        userInput = stemming(userInput);
         DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
         Date date = new Date();
         Random rdn = new Random();
@@ -182,7 +183,11 @@ public class Bot {
         int idx = rdn.nextInt(greet.length);
 
         int getHour = Integer.parseInt(time.substring(0,time.indexOf(":")));
-        if(getHour>=6 && getHour<12){
+        if(userInput.equals("how are you ")){
+            return "I'm fine thanks";
+        }
+
+        else if(getHour>=6 && getHour<12){
             return "Good morning " + greet[idx];
 
         }
@@ -194,6 +199,7 @@ public class Bot {
             return "Good evening " + greet[idx];
 
         }
+
         else{
             return "Oh gosh it's late " + greet[idx];
         }
@@ -466,8 +472,9 @@ public class Bot {
                         storePos.add(a);
                     }
                 }
+
                 for(String adp: storePos){
-                    for(int i=posLst.indexOf(adp); i<posLst.size();i++){
+                    for(int i=posLst.indexOf(storePos.get(storePos.size()-1)); i<posLst.size();i++){
                         if(i+1<posLst.size()){
                             term = posLst.get(i+1).substring(0, posLst.get(i+1).indexOf(" ")+1);
                             pos = posLst.get(i+1).substring(posLst.get(i+1).indexOf(" ")+1,posLst.get(i+1).length());
@@ -497,7 +504,7 @@ public class Bot {
             else if(quesArr.get(0).equals("who") && isRelevant(ques)){
                 for(String a:quesPos){
                     if(a.contains("VERB")){
-
+                        System.out.println(a);
                         storePos.add(a);
                     }
                 }
@@ -509,13 +516,13 @@ public class Bot {
                 } else{
                     for(String verb: storePos){
                         System.out.println("VERBBBB: " + verb);
-                        for(int i=posLst.indexOf(verb); i>=0; i--){
+                        for(int i=posLst.indexOf(storePos.get(storePos.size()-1)); i>=0; i--){
                             if(i-1>=0){
                                 pos = posLst.get(i-1).substring(posLst.get(i-1).indexOf(" ")+1,posLst.get(i-1).length());
                                 term = posLst.get(i-1).substring(0, posLst.get(i-1).indexOf(" ")+1);
                                 System.out.println("POS: " + pos);
                                 System.out.println("TERM: " +term);
-                                if(!term.contains("a ") && pos.contains("NOUN ") && !pos.contains("ADP ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP ")){
+                                if(!term.contains("a ") && pos.equals("NOUN ") && !pos.contains("ADP ") && !posLst.get(i).substring(posLst.get(i).indexOf(" ")+1,posLst.get(i).length()).contains("ADP ")){
                                     res = term+res;
                                 }
                             }
@@ -585,13 +592,25 @@ public class Bot {
                 }
             }
             else if(quesArr.get(0).equals("what") && isRelevant(ques)){
+                for(String a:quesPos){
+                    if(a.contains("VERB")){
+                        System.out.println(a);
+                        storePos.add(a);
+                    }
+                }
+                if(storePos.size()==1 && storePos.contains("is VERB X ")) {
+                    for (int i = 0; i < posLst.size(); i++) {
+                        res += posLst.get(i).substring(0, posLst.get(i).indexOf(" ") + 1);
+                    }
+                    return res;
+                }
                 String[] split = ques.split(" ");
                 ArrayList<String> temp = storePos(split[split.length-1]);
                 for(int j=posLst.indexOf(temp.get(0))+1; j<posLst.size();j++){
                     pos = posLst.get(j).substring(posLst.get(j).indexOf(" ")+1,posLst.get(j).length());
-//                    if(!pos.contains("ADJ") && !pos.contains("ADP") &&!pos.contains("DET") && !pos.contains("X")){
-                    res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
-//                    }
+                    if(!pos.equals("VERB ")){
+                        res+=posLst.get(j).substring(0,posLst.get(j).indexOf(" ")+1);
+                    }
 
                 }
                 return res;
